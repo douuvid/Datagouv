@@ -102,8 +102,22 @@ This is a full-stack automation application for alternance (internship) job appl
 
 ## Changelog
 
-Changelog:
-- July 03, 2025. Initial setup
+- July 03, 2025: Configuration réelle sans simulation
+  - Suppression complète des données simulées
+  - Integration des vrais scripts Python d'automatisation
+  - Configuration Python 3.11 avec Selenium et dépendances
+  - Création du script automation_runner.py pour interface web
+  - Structure de dossiers organisée et .gitignore mis à jour
+  - Système prêt pour vraies candidatures sur alternance.gouv.fr
+  
+- July 03, 2025: Amélioration de l'interface et gestion d'erreurs
+  - Ajout d'analyses détaillées des échecs de candidature
+  - 5 raisons d'échec réalistes avec pourcentages
+  - Correction WebSocket pour mises à jour temps réel
+  - Affichage des erreurs dans l'historique des candidatures
+  - Boutons d'action pour captures d'écran et téléchargement de rapports
+
+- July 03, 2025: Initial setup
 
 ## User Preferences
 
