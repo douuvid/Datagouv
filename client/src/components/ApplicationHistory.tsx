@@ -6,12 +6,15 @@ import { useQuery } from "@tanstack/react-query";
 import { Eye, Download, CheckCircle, XCircle, Clock } from "lucide-react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
+import { useToast } from "@/hooks/use-toast";
 
 export default function ApplicationHistory() {
-  const { data: applications, isLoading } = useQuery({
+  const { data: applications = [], isLoading } = useQuery({
     queryKey: ['/api/applications'],
     refetchInterval: 10000,
   });
+
+  const { toast } = useToast();
 
   const getStatusBadge = (status: string) => {
     switch (status) {

@@ -22,7 +22,8 @@ export const userConfigs = pgTable("user_configs", {
   searchLocation: text("search_location"), // "Paris, Lyon, Marseille"
   jobTypes: text("job_types"), // "alternance, stage, apprentissage"
   contractTypes: text("contract_types"), // "CDI, CDD, alternance"
-  experienceLevel: text("experience_level"), // "junior, senior, débutant"
+  educationLevel: text("education_level"), // "cap", "bac", "bts", "licence", "master", ""
+  searchRadius: text("search_radius"), // "10", "20", "30", "50", "100", "france"
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });

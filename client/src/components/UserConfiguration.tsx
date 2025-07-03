@@ -21,7 +21,8 @@ const formSchema = insertUserConfigSchema.extend({
   searchKeywords: z.string().optional(),
   searchLocation: z.string().optional(),
   jobTypes: z.string().optional(),
-  experienceLevel: z.string().optional(),
+  educationLevel: z.string().optional(),
+  searchRadius: z.string().optional(),
 });
 
 interface UserConfigurationProps {
@@ -51,7 +52,8 @@ Cordialement,
       searchKeywords: userConfig?.searchKeywords || "",
       searchLocation: userConfig?.searchLocation || "",
       jobTypes: userConfig?.jobTypes || "",
-      experienceLevel: userConfig?.experienceLevel || "",
+      educationLevel: userConfig?.educationLevel || "",
+      searchRadius: userConfig?.searchRadius || "",
     },
   });
 
@@ -221,23 +223,57 @@ Cordialement,
                 )}
               />
 
-              <FormField
-                control={form.control}
-                name="experienceLevel"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Niveau d'expérience</FormLabel>
-                    <FormControl>
-                      <Input 
-                        placeholder="junior, débutant, 1-2 ans d'expérience" 
-                        {...field}
-                        value={field.value || ''}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="educationLevel"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Niveau de formation</FormLabel>
+                      <FormControl>
+                        <select 
+                          className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                          {...field}
+                          value={field.value || ''}
+                        >
+                          <option value="">~ Indifférent</option>
+                          <option value="cap">Cap, autres formations niveau 3</option>
+                          <option value="bac">Bac, autres formations niveau 4</option>
+                          <option value="bts">BTS, DEUST, autres formations niveaux 5 (Bac+2)</option>
+                          <option value="licence">Licence, Maîtrise, autres formations niveaux 6 (Bac+3 à Bac+4)</option>
+                          <option value="master">Master, titre ingénieur, autres formations niveaux 7 ou 8 (Bac+5)</option>
+                        </select>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="searchRadius"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Rayon de recherche</FormLabel>
+                      <FormControl>
+                        <select 
+                          className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                          {...field}
+                          value={field.value || ''}
+                        >
+                          <option value="10">10 km</option>
+                          <option value="20">20 km</option>
+                          <option value="30">30 km</option>
+                          <option value="50">50 km</option>
+                          <option value="100">100 km</option>
+                          <option value="france">Toute la France</option>
+                        </select>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
             </div>
 
             <Button

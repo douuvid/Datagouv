@@ -303,7 +303,8 @@ class AutomationService {
         searchKeywords: userConfig.searchKeywords,
         searchLocation: userConfig.searchLocation,
         contractTypes: userConfig.contractTypes,
-        experienceLevel: userConfig.experienceLevel,
+        educationLevel: userConfig.educationLevel,
+        searchRadius: userConfig.searchRadius,
         settings: {
           delayBetweenApplications: settings.delayBetweenApplications || 30,
           maxApplicationsPerSession: settings.maxApplicationsPerSession || 10,
@@ -514,7 +515,8 @@ class AutomationService {
     const keywords = userConfig.searchKeywords?.toLowerCase() || '';
     const locations = userConfig.searchLocation?.toLowerCase() || '';
     const jobTypes = userConfig.jobTypes?.toLowerCase() || '';
-    const experienceLevel = userConfig.experienceLevel?.toLowerCase() || '';
+    const educationLevel = userConfig.educationLevel?.toLowerCase() || '';
+    const searchRadius = userConfig.searchRadius || '30';
 
     // Log the search criteria
     if (keywords) {

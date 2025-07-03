@@ -217,7 +217,8 @@ class AutomationRunner:
                 'keywords': self.user_config.get('searchKeywords', ''),
                 'location': self.user_config.get('searchLocation', ''),
                 'contract_types': self.user_config.get('contractTypes', []),
-                'experience_level': self.user_config.get('experienceLevel', '')
+                'education_level': self.user_config.get('educationLevel', ''),
+                'search_radius': self.user_config.get('searchRadius', '30')
             }
             
             self.log_message('info', f'Recherche avec les critères: {search_params}')
