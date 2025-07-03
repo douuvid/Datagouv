@@ -58,9 +58,14 @@ class AutomationService {
     this.currentSession = session;
 
     try {
-      // Start demo automation process (since Python setup is complex)
-      await this.startDemoAutomation(userConfig, settings, session);
+      // Start demo automation process directly without Python
       this.emitUpdate('session_started', session);
+      
+      // Start the demo automation in the background
+      setTimeout(async () => {
+        await this.startDemoAutomation(userConfig, settings, session);
+      }, 1000);
+      
       return session;
     } catch (error) {
       // If automation fails, update session status
@@ -151,37 +156,7 @@ class AutomationService {
     };
   }
 
-  private async startPythonProcess(userConfig: UserConfig, settings: AutomationSettings, session: AutomationSession) {
-    const pythonScriptPath = path.join(process.cwd(), 'python_scripts', 'automation_runner.py');
-
-    const args = [
-      pythonScriptPath,
-      '--session-id', session.id.toString(),
-      '--user-config', JSON.stringify(userConfig),
-      '--settings', JSON.stringify(settings),
-    ];
-
-    this.currentProcess = spawn('python3', args, {
-      stdio: ['pipe', 'pipe', 'pipe'],
-      env: process.env,
-    });
-
-    this.currentProcess.stdout?.on('data', (data) => {
-      this.handlePythonOutput(data.toString());
-    });
-
-    this.currentProcess.stderr?.on('data', (data) => {
-      this.handlePythonError(data.toString());
-    });
-
-    this.currentProcess.on('close', (code) => {
-      this.handlePythonClose(code);
-    });
-
-    this.currentProcess.on('error', (error) => {
-      this.handlePythonError(error.message);
-    });
-  }
+  // Remove Python process dependency
 
   private async handlePythonOutput(output: string) {
     try {
