@@ -337,8 +337,33 @@ class AutomationService {
       // Simulate application process with realistic timing
       await new Promise(resolve => setTimeout(resolve, 2000)); // 2 seconds for processing
       
-      // Simulate success/failure (90% success rate)
-      const isSuccess = Math.random() > 0.1;
+      // Simulate different failure scenarios with realistic reasons
+      const scenarioRand = Math.random();
+      let isSuccess = true;
+      let errorMessage = '';
+      
+      if (scenarioRand < 0.05) {
+        // 5% - Redirection vers un site externe
+        isSuccess = false;
+        errorMessage = 'Offre redirige vers un site externe (non alternance.gouv.fr)';
+      } else if (scenarioRand < 0.08) {
+        // 3% - Formation au lieu d'alternance
+        isSuccess = false;
+        errorMessage = 'Il s\'agit d\'une formation, pas d\'une offre d\'alternance';
+      } else if (scenarioRand < 0.12) {
+        // 4% - Formulaire non accessible
+        isSuccess = false;
+        errorMessage = 'Formulaire de candidature temporairement indisponible';
+      } else if (scenarioRand < 0.15) {
+        // 3% - Offre expirée
+        isSuccess = false;
+        errorMessage = 'Offre expirée ou pourvue';
+      } else if (scenarioRand < 0.18) {
+        // 3% - Problème technique
+        isSuccess = false;
+        errorMessage = 'Erreur technique lors du remplissage du formulaire';
+      }
+      // 82% de succès
       
       if (isSuccess) {
         await storage.updateApplication(application.id, {
@@ -349,10 +374,10 @@ class AutomationService {
       } else {
         await storage.updateApplication(application.id, {
           status: 'failed',
-          errorMessage: 'Formulaire de candidature non accessible',
+          errorMessage: errorMessage,
         });
-        this.emitUpdate('application_updated', { ...application, status: 'failed', errorMessage: 'Formulaire de candidature non accessible' });
-        await this.createLog('error', `Échec de candidature pour: ${offer.title} - Formulaire non accessible`);
+        this.emitUpdate('application_updated', { ...application, status: 'failed', errorMessage: errorMessage });
+        await this.createLog('error', `Échec de candidature pour: ${offer.title} - ${errorMessage}`);
       }
 
       // Update session statistics

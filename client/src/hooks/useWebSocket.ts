@@ -90,6 +90,15 @@ export function useWebSocket() {
         queryClient.invalidateQueries({ queryKey: ['/api/automation/status'] });
         break;
 
+      case 'session_ended':
+        toast({
+          title: "Automatisation terminée",
+          description: "Le processus de postulation automatique s'est terminé avec succès.",
+        });
+        queryClient.invalidateQueries({ queryKey: ['/api/automation/status'] });
+        queryClient.invalidateQueries({ queryKey: ['/api/applications'] });
+        break;
+
       case 'application_started':
         queryClient.invalidateQueries({ queryKey: ['/api/applications'] });
         break;

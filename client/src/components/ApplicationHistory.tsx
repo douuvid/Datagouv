@@ -91,7 +91,14 @@ export default function ApplicationHistory() {
                       {application.company}
                     </TableCell>
                     <TableCell>
-                      {getStatusBadge(application.status)}
+                      <div className="space-y-1">
+                        {getStatusBadge(application.status)}
+                        {application.status === 'failed' && application.errorMessage && (
+                          <div className="text-xs text-red-600 max-w-xs">
+                            {application.errorMessage}
+                          </div>
+                        )}
+                      </div>
                     </TableCell>
                     <TableCell>
                       <div className="flex space-x-2">
