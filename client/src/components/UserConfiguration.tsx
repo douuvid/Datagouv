@@ -18,6 +18,10 @@ const formSchema = insertUserConfigSchema.extend({
   email: z.string().email("Email invalide"),
   phone: z.string().min(10, "Numéro de téléphone invalide"),
   message: z.string().min(10, "Le message doit contenir au moins 10 caractères"),
+  searchKeywords: z.string().optional(),
+  searchLocation: z.string().optional(),
+  jobTypes: z.string().optional(),
+  experienceLevel: z.string().optional(),
 });
 
 interface UserConfigurationProps {
@@ -44,6 +48,10 @@ Je serais ravi(e) de pouvoir échanger avec vous pour vous présenter ma motivat
 
 Cordialement,
 [Prénom Nom]`,
+      searchKeywords: userConfig?.searchKeywords || "",
+      searchLocation: userConfig?.searchLocation || "",
+      jobTypes: userConfig?.jobTypes || "",
+      experienceLevel: userConfig?.experienceLevel || "",
     },
   });
 
