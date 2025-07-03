@@ -63,7 +63,7 @@ class AutomationService {
       
       // Start the demo automation in the background
       setTimeout(async () => {
-        await this.startDemoAutomation(userConfig, settings, session);
+        await this.startRealAutomation(userConfig, settings, session);
       }, 1000);
       
       return session;
@@ -286,9 +286,94 @@ class AutomationService {
     this.emitUpdate('log_created', log);
   }
 
+  private async startRealAutomation(userConfig: UserConfig, settings: AutomationSettings, session: AutomationSession) {
+    // Start real Python automation using actual scripts
+    await this.createLog('info', 'Démarrage de l\'automatisation réelle...');
+    
+    try {
+      // Create user data object for Python script
+      const userData = {
+        firstName: userConfig.firstName,
+        lastName: userConfig.lastName,
+        email: userConfig.email,
+        phone: userConfig.phone,
+        message: userConfig.message,
+        cvPath: userConfig.cvPath,
+        coverLetterPath: userConfig.coverLetterPath,
+        searchKeywords: userConfig.searchKeywords,
+        searchLocation: userConfig.searchLocation,
+        contractTypes: userConfig.contractTypes,
+        experienceLevel: userConfig.experienceLevel,
+        settings: {
+          delayBetweenApplications: settings.delayBetweenApplications || 30,
+          maxApplicationsPerSession: settings.maxApplicationsPerSession || 10,
+          autoFillForm: settings.autoFillForm ?? true,
+          autoSendApplication: settings.autoSendApplication ?? true,
+          pauseBeforeSend: settings.pauseBeforeSend ?? false,
+          captureScreenshots: settings.captureScreenshots ?? true
+        }
+      };
+      
+      // Path to the Python automation runner script
+      const pythonScript = path.join(process.cwd(), 'python_scripts', 'automation_runner.py');
+      
+      await this.createLog('info', 'Lancement du script Python d\'automatisation...');
+      
+      // Start Python process
+      this.currentProcess = spawn('python3', [pythonScript], {
+        cwd: process.cwd(),
+        stdio: ['pipe', 'pipe', 'pipe'],
+        env: {
+          ...process.env,
+          AUTOMATION_SESSION_ID: session.id.toString(),
+          USER_CONFIG: JSON.stringify(userData)
+        }
+      });
+      
+      // Send user data to Python script
+      if (this.currentProcess.stdin) {
+        this.currentProcess.stdin.write(JSON.stringify(userData) + '\n');
+        this.currentProcess.stdin.end();
+      }
+      
+      // Handle Python script output
+      if (this.currentProcess.stdout) {
+        this.currentProcess.stdout.on('data', (data) => {
+          const output = data.toString();
+          this.handlePythonOutput(output);
+        });
+      }
+      
+      if (this.currentProcess.stderr) {
+        this.currentProcess.stderr.on('data', (data) => {
+          const error = data.toString();
+          this.handlePythonError(error);
+        });
+      }
+      
+      this.currentProcess.on('close', (code) => {
+        this.handlePythonClose(code);
+      });
+      
+      await this.createLog('info', 'Script Python démarré, connexion à alternance.gouv.fr...');
+      
+    } catch (error) {
+      await this.createLog('error', `Erreur lors du démarrage de l'automatisation: ${error}`);
+      
+      // Mark session as failed
+      await storage.updateAutomationSession(session.id, {
+        status: 'failed',
+        endedAt: new Date()
+      });
+      
+      this.currentSession = null;
+      throw error;
+    }
+  }
+
+  // Fallback method for demonstration when Python is not available
   private async startDemoAutomation(userConfig: UserConfig, settings: AutomationSettings, session: AutomationSession) {
-    // Start a demo automation process that simulates real job applications
-    await this.createLog('info', 'Démarrage de la session d\'automatisation...');
+    await this.createLog('warning', 'Mode démonstration - Python non disponible, utilisation de données simulées');
     
     // Generate job offers based on user preferences
     const mockOffers = this.generateJobOffers(userConfig);

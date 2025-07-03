@@ -3,36 +3,26 @@
 Automation Runner - Interface between the web application and the existing Python automation scripts
 """
 
-import os
-import sys
 import json
-import argparse
-import time
+import sys
+import os
 import logging
+import traceback
+from datetime import datetime
 from typing import Dict, Any, Optional
-from pathlib import Path
 
-# Add the parent directory to the path to import the existing scripts
-sys.path.insert(0, str(Path(__file__).parent.parent))
+# Add the attached_assets directory to the Python path
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'attached_assets'))
 
+# Import the main automation script
 try:
-    from attached_assets.alternance_gouv_1751543361694 import (
-        setup_driver, 
-        search_offers, 
-        process_offers,
-        logger as base_logger
-    )
-    from attached_assets.postuler_functions_1751543385370 import (
-        remplir_formulaire_candidature,
-        postuler_offre
-    )
-    from attached_assets.capture_functions_1751543392689 import (
-        capture_and_highlight,
-        switch_to_iframe_if_needed
-    )
+    from alternance_gouv_1751543361694 import run_scraper, setup_driver, parse_results
+    from postuler_functions import postuler_offre, remplir_formulaire_candidature
+    from capture_functions import capture_and_highlight, switch_to_iframe_if_needed
+    SCRIPTS_LOADED = True
 except ImportError as e:
-    print(f"JSON:{json.dumps({'type': 'log', 'data': {'level': 'error', 'message': f'Failed to import automation modules: {e}'}})}")
-    sys.exit(1)
+    logging.error(f"Failed to import automation scripts: {e}")
+    SCRIPTS_LOADED = False
 
 class AutomationRunner:
     def __init__(self, session_id: int, user_config: Dict[str, Any], settings: Dict[str, Any]):
@@ -40,240 +30,264 @@ class AutomationRunner:
         self.user_config = user_config
         self.settings = settings
         self.driver = None
-        self.running = False
-        self.total_applications = 0
+        self.applications_processed = 0
         self.successful_applications = 0
         self.failed_applications = 0
         
-        # Setup logging
         self.setup_logging()
         
     def setup_logging(self):
         """Setup logging configuration"""
-        self.logger = logging.getLogger(f'automation_runner_{self.session_id}')
-        self.logger.setLevel(logging.INFO)
-        
-        # Create console handler that outputs JSON for the web interface
-        handler = logging.StreamHandler()
-        handler.setLevel(logging.INFO)
-        self.logger.addHandler(handler)
+        logging.basicConfig(
+            level=logging.INFO,
+            format='%(asctime)s - %(levelname)s - %(message)s',
+            handlers=[
+                logging.FileHandler(f'logs/automation_{self.session_id}.log'),
+                logging.StreamHandler()
+            ]
+        )
         
     def log_message(self, level: str, message: str, metadata: Optional[Dict] = None):
         """Log a message that will be sent to the web interface"""
-        log_data = {
+        log_entry = {
             'type': 'log',
-            'data': {
-                'level': level,
-                'message': message,
-                'metadata': metadata or {}
-            }
+            'level': level,
+            'message': message,
+            'timestamp': datetime.now().isoformat(),
+            'session_id': self.session_id,
+            'metadata': metadata or {}
         }
-        print(f"JSON:{json.dumps(log_data)}")
         
+        # Send to web interface via stdout
+        print(f"WEB_LOG: {json.dumps(log_entry)}")
+        
+        # Also log locally
+        getattr(logging, level.lower(), logging.info)(message)
+    
     def emit_event(self, event_type: str, data: Dict[str, Any]):
         """Emit an event to the web interface"""
-        event_data = {
+        event = {
             'type': event_type,
-            'data': data
+            'data': data,
+            'timestamp': datetime.now().isoformat(),
+            'session_id': self.session_id
         }
-        print(f"JSON:{json.dumps(event_data)}")
         
+        print(f"WEB_EVENT: {json.dumps(event)}")
+    
     def setup_driver(self):
         """Setup the Selenium WebDriver"""
         try:
-            self.log_message('info', 'Setting up browser driver...')
-            self.driver = setup_driver(headless=not self.settings.get('showBrowser', False))
-            self.log_message('success', 'Browser driver setup completed')
+            self.log_message('info', 'Configuration du navigateur Chrome...')
+            self.driver = setup_driver()
+            self.log_message('success', 'Navigateur configuré avec succès')
             return True
         except Exception as e:
-            self.log_message('error', f'Failed to setup browser driver: {str(e)}')
+            self.log_message('error', f'Erreur lors de la configuration du navigateur: {str(e)}')
             return False
-            
+    
     def capture_screenshot(self, description: str, application_data: Optional[Dict] = None):
         """Capture a screenshot and notify the web interface"""
         try:
-            if not self.settings.get('captureScreenshots', True):
-                return
+            if not self.driver:
+                return None
                 
-            timestamp = int(time.time())
-            filename = f"automation_session_{self.session_id}_{timestamp}_{description.replace(' ', '_')}.png"
-            filepath = os.path.join('debug_screenshots', filename)
+            filename = f"debug_screenshots/session_{self.session_id}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.png"
             
-            self.driver.save_screenshot(filepath)
+            if SCRIPTS_LOADED:
+                capture_and_highlight(self.driver, None, description)
+            else:
+                self.driver.save_screenshot(filename)
             
+            # Notify web interface
             screenshot_data = {
-                'filePath': filepath,
+                'session_id': self.session_id,
+                'file_path': filename,
                 'description': description,
-                'applicationId': application_data.get('id') if application_data else None
+                'captured_at': datetime.now().isoformat()
             }
             
+            if application_data:
+                screenshot_data['application_id'] = application_data.get('id')
+            
             self.emit_event('screenshot_captured', screenshot_data)
-            self.log_message('info', f'Screenshot captured: {description}')
+            return filename
             
         except Exception as e:
-            self.log_message('error', f'Failed to capture screenshot: {str(e)}')
-            
+            self.log_message('error', f'Erreur lors de la capture: {str(e)}')
+            return None
+    
     def process_application(self, offer_data: Dict[str, Any]) -> bool:
         """Process a single job application"""
         try:
-            # Notify web interface that application started
+            self.log_message('info', f'Traitement de l\'offre: {offer_data["title"]}')
+            
+            # Create application record
             application_data = {
-                'jobTitle': offer_data.get('title', 'Unknown'),
-                'company': offer_data.get('company', 'Unknown'),
-                'location': offer_data.get('location', 'Unknown')
+                'session_id': self.session_id,
+                'job_title': offer_data['title'],
+                'company': offer_data.get('company', 'Non spécifié'),
+                'location': offer_data.get('location', 'Non spécifié'),
+                'status': 'pending',
+                'applied_at': datetime.now().isoformat()
             }
             
             self.emit_event('application_started', application_data)
-            self.log_message('info', f"Starting application for: {application_data['jobTitle']}")
             
-            # Capture screenshot before starting
-            self.capture_screenshot(f"starting_application_{application_data['jobTitle']}", application_data)
+            # Capture screenshot before processing
+            self.capture_screenshot(f"Avant candidature - {offer_data['title']}", application_data)
             
-            # Fill and submit the application form
+            # Process the application
             success = self.fill_application_form(offer_data, application_data)
             
             if success:
+                application_data['status'] = 'completed'
                 self.successful_applications += 1
-                application_data['status'] = 'sent'
-                self.log_message('success', f"Application sent successfully for: {application_data['jobTitle']}")
+                self.log_message('success', f'Candidature envoyée avec succès pour {offer_data["title"]}')
             else:
-                self.failed_applications += 1
                 application_data['status'] = 'failed'
-                application_data['errorMessage'] = 'Failed to submit application'
-                self.log_message('error', f"Application failed for: {application_data['jobTitle']}")
+                application_data['error_message'] = 'Échec lors du remplissage du formulaire'
+                self.failed_applications += 1
+                self.log_message('error', f'Échec de candidature pour {offer_data["title"]}')
             
-            # Capture screenshot after completion
-            self.capture_screenshot(f"completed_application_{application_data['jobTitle']}", application_data)
+            # Capture screenshot after processing
+            self.capture_screenshot(f"Après candidature - {offer_data['title']}", application_data)
             
-            # Notify web interface of completion
             self.emit_event('application_completed', application_data)
-            
-            # Update session statistics
-            self.update_session_stats()
+            self.applications_processed += 1
             
             return success
             
         except Exception as e:
-            self.log_message('error', f'Error processing application: {str(e)}')
+            self.log_message('error', f'Erreur lors du traitement de l\'offre: {str(e)}')
+            traceback.print_exc()
             return False
-            
+    
     def fill_application_form(self, offer_data: Dict[str, Any], application_data: Dict[str, Any]) -> bool:
         """Fill the application form using the existing automation functions"""
         try:
-            # Use the existing form filling logic
-            return remplir_formulaire_candidature(
-                self.driver,
-                self.user_config,
-                offer_data.get('title', 'Unknown')
-            )
-        except Exception as e:
-            self.log_message('error', f'Error filling application form: {str(e)}')
-            return False
+            if not SCRIPTS_LOADED:
+                self.log_message('warning', 'Scripts d\'automatisation non chargés, simulation de candidature')
+                return True
             
+            # Use the existing postuler_offre function
+            url_offre = offer_data.get('url', '')
+            titre_offre = offer_data.get('title', '')
+            
+            if not url_offre:
+                self.log_message('error', 'URL de l\'offre manquante')
+                return False
+            
+            # Navigate to the offer and apply
+            success = postuler_offre(self.driver, url_offre, titre_offre, self.user_config)
+            
+            return success
+            
+        except Exception as e:
+            self.log_message('error', f'Erreur lors du remplissage du formulaire: {str(e)}')
+            return False
+    
     def update_session_stats(self):
         """Update and emit session statistics"""
-        self.total_applications = self.successful_applications + self.failed_applications
-        
-        stats_data = {
-            'totalApplications': self.total_applications,
-            'successfulApplications': self.successful_applications,
-            'failedApplications': self.failed_applications
+        stats = {
+            'total_applications': self.applications_processed,
+            'successful_applications': self.successful_applications,
+            'failed_applications': self.failed_applications,
+            'session_id': self.session_id
         }
         
-        self.emit_event('session_stats', stats_data)
-        
+        self.emit_event('session_stats_updated', stats)
+    
     def run(self):
         """Main automation loop"""
         try:
-            self.log_message('info', f'Starting automation session {self.session_id}')
-            self.running = True
+            self.log_message('info', 'Démarrage de l\'automatisation réelle...')
             
-            # Setup browser driver
+            if not SCRIPTS_LOADED:
+                self.log_message('error', 'Scripts d\'automatisation non disponibles')
+                return
+            
+            # Setup WebDriver
             if not self.setup_driver():
-                return False
-                
-            # Navigate to the job search site
-            self.log_message('info', 'Navigating to job search site...')
-            self.driver.get('https://www.alternance.gouv.fr/')
+                self.log_message('error', 'Impossible de configurer le navigateur')
+                return
             
-            # Wait for page to load
-            time.sleep(3)
-            self.capture_screenshot('homepage_loaded')
+            # Extract search parameters from user config
+            search_params = {
+                'keywords': self.user_config.get('searchKeywords', ''),
+                'location': self.user_config.get('searchLocation', ''),
+                'contract_types': self.user_config.get('contractTypes', []),
+                'experience_level': self.user_config.get('experienceLevel', '')
+            }
             
-            # Search for offers (this would use the existing search logic)
-            self.log_message('info', 'Searching for job offers...')
+            self.log_message('info', f'Recherche avec les critères: {search_params}')
             
-            # Mock offers for demonstration (replace with actual search logic)
-            offers = [
-                {
-                    'title': 'Développeur Full Stack - Alternance',
-                    'company': 'TechCorp SAS',
-                    'location': 'Paris, France'
-                },
-                {
-                    'title': 'Développeur React - Stage',
-                    'company': 'InnovateLab',
-                    'location': 'Lyon, France'
-                }
-            ]
+            # Run the scraper to get job offers
+            offers = run_scraper(search_params)
             
-            self.log_message('info', f'Found {len(offers)} job offers')
+            if not offers:
+                self.log_message('warning', 'Aucune offre trouvée avec les critères spécifiés')
+                return
+            
+            self.log_message('success', f'{len(offers)} offres trouvées')
             
             # Process each offer
-            for i, offer in enumerate(offers):
-                if not self.running:
-                    break
-                    
-                self.log_message('info', f'Processing offer {i+1}/{len(offers)}: {offer["title"]}')
+            max_applications = self.settings.get('maxApplicationsPerSession', 10)
+            delay_between_applications = self.settings.get('delayBetweenApplications', 30)
+            
+            for i, offer in enumerate(offers[:max_applications]):
+                self.log_message('info', f'Traitement de l\'offre {i+1}/{min(len(offers), max_applications)}')
                 
                 # Process the application
                 self.process_application(offer)
                 
-                # Check if we've reached the maximum applications
-                if self.total_applications >= self.settings.get('maxApplicationsPerSession', 50):
-                    self.log_message('info', 'Maximum applications per session reached')
-                    break
-                    
+                # Update statistics
+                self.update_session_stats()
+                
                 # Wait between applications
-                delay = self.settings.get('delayBetweenApplications', 30)
-                if delay > 0 and i < len(offers) - 1:
-                    self.log_message('info', f'Waiting {delay} seconds before next application...')
-                    time.sleep(delay)
-                    
-            self.log_message('info', f'Automation session completed. Total: {self.total_applications}, Success: {self.successful_applications}, Failed: {self.failed_applications}')
+                if i < len(offers) - 1:
+                    self.log_message('info', f'Attente de {delay_between_applications} secondes avant la prochaine candidature')
+                    import time
+                    time.sleep(delay_between_applications)
             
-        except KeyboardInterrupt:
-            self.log_message('info', 'Automation stopped by user')
+            self.log_message('success', 'Automatisation terminée avec succès')
+            
         except Exception as e:
-            self.log_message('error', f'Automation error: {str(e)}')
+            self.log_message('error', f'Erreur fatale: {str(e)}')
+            traceback.print_exc()
         finally:
             if self.driver:
                 self.driver.quit()
-                self.log_message('info', 'Browser driver closed')
             
-        return True
+            # Final statistics
+            self.update_session_stats()
+            self.emit_event('session_completed', {
+                'session_id': self.session_id,
+                'total_applications': self.applications_processed,
+                'successful_applications': self.successful_applications,
+                'failed_applications': self.failed_applications
+            })
 
 def main():
     """Main entry point"""
-    parser = argparse.ArgumentParser(description='Automation Runner')
-    parser.add_argument('--session-id', type=int, required=True, help='Session ID')
-    parser.add_argument('--user-config', type=str, required=True, help='User configuration JSON')
-    parser.add_argument('--settings', type=str, required=True, help='Automation settings JSON')
-    
-    args = parser.parse_args()
-    
     try:
-        user_config = json.loads(args.user_config)
-        settings = json.loads(args.settings)
-    except json.JSONDecodeError as e:
-        print(f"JSON:{json.dumps({'type': 'log', 'data': {'level': 'error', 'message': f'Invalid JSON configuration: {e}'}})}")
+        # Read configuration from stdin
+        input_data = sys.stdin.read()
+        config = json.loads(input_data)
+        
+        session_id = int(os.environ.get('AUTOMATION_SESSION_ID', '1'))
+        user_config = config
+        settings = config.get('settings', {})
+        
+        # Create and run automation
+        runner = AutomationRunner(session_id, user_config, settings)
+        runner.run()
+        
+    except Exception as e:
+        error_msg = f"Erreur fatale dans le runner: {str(e)}"
+        print(f"WEB_LOG: {json.dumps({'type': 'log', 'level': 'error', 'message': error_msg})}")
+        traceback.print_exc()
         sys.exit(1)
-    
-    # Create and run the automation
-    runner = AutomationRunner(args.session_id, user_config, settings)
-    success = runner.run()
-    
-    sys.exit(0 if success else 1)
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
