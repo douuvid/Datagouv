@@ -156,6 +156,82 @@ Cordialement,
               )}
             />
 
+            <div className="border-t pt-4">
+              <h3 className="text-md font-semibold mb-3">Préférences de recherche</h3>
+              
+              <FormField
+                control={form.control}
+                name="searchKeywords"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Mots-clés de recherche</FormLabel>
+                    <FormControl>
+                      <Input 
+                        placeholder="développeur web, react, javascript, full stack" 
+                        {...field}
+                        value={field.value || ''}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="searchLocation"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Localisation préférée</FormLabel>
+                    <FormControl>
+                      <Input 
+                        placeholder="Paris, Lyon, Marseille, télétravail" 
+                        {...field}
+                        value={field.value || ''}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="jobTypes"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Types de contrat</FormLabel>
+                    <FormControl>
+                      <Input 
+                        placeholder="alternance, stage, apprentissage" 
+                        {...field}
+                        value={field.value || ''}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="experienceLevel"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Niveau d'expérience</FormLabel>
+                    <FormControl>
+                      <Input 
+                        placeholder="junior, débutant, 1-2 ans d'expérience" 
+                        {...field}
+                        value={field.value || ''}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
             <Button
               type="submit"
               className="w-full"

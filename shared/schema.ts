@@ -17,6 +17,12 @@ export const userConfigs = pgTable("user_configs", {
   message: text("message").notNull(),
   cvPath: text("cv_path"),
   coverLetterPath: text("cover_letter_path"),
+  // Search preferences
+  searchKeywords: text("search_keywords"), // "développeur web, react, javascript"
+  searchLocation: text("search_location"), // "Paris, Lyon, Marseille"
+  jobTypes: text("job_types"), // "alternance, stage, apprentissage"
+  contractTypes: text("contract_types"), // "CDI, CDD, alternance"
+  experienceLevel: text("experience_level"), // "junior, senior, débutant"
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });

@@ -290,33 +290,27 @@ class AutomationService {
     // Start a demo automation process that simulates real job applications
     await this.createLog('info', 'Démarrage de la session d\'automatisation...');
     
-    // Simulate finding job offers
-    const mockOffers = [
-      {
-        title: 'Développeur Full Stack - Alternance',
-        company: 'TechCorp SAS',
-        location: 'Paris, France',
-        url: 'https://alternance.gouv.fr/offre/123'
-      },
-      {
-        title: 'Développeur React - Stage',
-        company: 'InnovateLab',
-        location: 'Lyon, France',
-        url: 'https://alternance.gouv.fr/offre/124'
-      },
-      {
-        title: 'Ingénieur DevOps Junior',
-        company: 'CloudTech',
-        location: 'Toulouse, France',
-        url: 'https://alternance.gouv.fr/offre/125'
-      },
-      {
-        title: 'Développeur Backend Python',
-        company: 'DataFlow Systems',
-        location: 'Marseille, France',
-        url: 'https://alternance.gouv.fr/offre/126'
-      }
-    ];
+    // Generate job offers based on user preferences
+    const mockOffers = this.generateJobOffers(userConfig);
+    
+    if (mockOffers.length === 0) {
+      await this.createLog('warning', 'Aucune offre trouvée correspondant à vos critères. Utilisation des critères par défaut.');
+      // Use default offers if no preferences are set
+      mockOffers.push(
+        {
+          title: 'Développeur Full Stack - Alternance',
+          company: 'TechCorp SAS',
+          location: 'Paris, France',
+          url: 'https://alternance.gouv.fr/offre/123'
+        },
+        {
+          title: 'Développeur React - Stage',
+          company: 'InnovateLab',
+          location: 'Lyon, France',
+          url: 'https://alternance.gouv.fr/offre/124'
+        }
+      );
+    }
 
     await this.createLog('success', `${mockOffers.length} offres d'alternance trouvées`);
 
@@ -402,6 +396,105 @@ class AutomationService {
     this.currentSession = null;
     this.emitUpdate('session_ended', { status: 'completed' });
     await this.createLog('success', 'Session d\'automatisation terminée avec succès');
+  }
+
+  private generateJobOffers(userConfig: UserConfig) {
+    const offers = [];
+    
+    const keywords = userConfig.searchKeywords?.toLowerCase() || '';
+    const locations = userConfig.searchLocation?.toLowerCase() || '';
+    const jobTypes = userConfig.jobTypes?.toLowerCase() || '';
+    const experienceLevel = userConfig.experienceLevel?.toLowerCase() || '';
+
+    // Log the search criteria
+    if (keywords) {
+      this.createLog('info', `Recherche avec mots-clés: ${keywords}`);
+    }
+    if (locations) {
+      this.createLog('info', `Recherche dans les villes: ${locations}`);
+    }
+
+    // Generate offers based on keywords
+    if (keywords.includes('développeur') || keywords.includes('dev') || keywords.includes('programmeur')) {
+      if (keywords.includes('web') || keywords.includes('frontend') || keywords.includes('react') || keywords.includes('javascript')) {
+        offers.push({
+          title: 'Développeur Frontend React - Alternance',
+          company: 'WebTech Solutions',
+          location: this.getLocationFromPreferences(locations) || 'Paris, France',
+          url: 'https://alternance.gouv.fr/offre/dev-frontend-001'
+        });
+      }
+      
+      if (keywords.includes('full stack') || keywords.includes('fullstack')) {
+        offers.push({
+          title: 'Développeur Full Stack - Alternance',
+          company: 'TechCorp SAS',
+          location: this.getLocationFromPreferences(locations) || 'Lyon, France',
+          url: 'https://alternance.gouv.fr/offre/dev-fullstack-001'
+        });
+      }
+      
+      if (keywords.includes('backend') || keywords.includes('python') || keywords.includes('node')) {
+        offers.push({
+          title: 'Développeur Backend Python - Alternance',
+          company: 'DataFlow Systems',
+          location: this.getLocationFromPreferences(locations) || 'Marseille, France',
+          url: 'https://alternance.gouv.fr/offre/dev-backend-001'
+        });
+      }
+      
+      if (keywords.includes('mobile') || keywords.includes('android') || keywords.includes('ios')) {
+        offers.push({
+          title: 'Développeur Mobile React Native - Alternance',
+          company: 'MobileFirst Studio',
+          location: this.getLocationFromPreferences(locations) || 'Toulouse, France',
+          url: 'https://alternance.gouv.fr/offre/dev-mobile-001'
+        });
+      }
+    }
+
+    if (keywords.includes('devops') || keywords.includes('infrastructure') || keywords.includes('cloud')) {
+      offers.push({
+        title: 'Ingénieur DevOps Junior - Alternance',
+        company: 'CloudTech',
+        location: this.getLocationFromPreferences(locations) || 'Nantes, France',
+        url: 'https://alternance.gouv.fr/offre/devops-001'
+      });
+    }
+
+    if (keywords.includes('data') || keywords.includes('analyse') || keywords.includes('machine learning')) {
+      offers.push({
+        title: 'Data Analyst - Alternance',
+        company: 'DataInsights Corp',
+        location: this.getLocationFromPreferences(locations) || 'Bordeaux, France',
+        url: 'https://alternance.gouv.fr/offre/data-001'
+      });
+    }
+
+    if (keywords.includes('design') || keywords.includes('ui') || keywords.includes('ux')) {
+      offers.push({
+        title: 'Designer UX/UI - Alternance',
+        company: 'Design Studio Pro',
+        location: this.getLocationFromPreferences(locations) || 'Nice, France',
+        url: 'https://alternance.gouv.fr/offre/design-001'
+      });
+    }
+
+    return offers;
+  }
+
+  private getLocationFromPreferences(locationPrefs: string): string | null {
+    if (!locationPrefs) return null;
+    
+    const cities = ['paris', 'lyon', 'marseille', 'toulouse', 'nantes', 'strasbourg', 'montpellier', 'bordeaux', 'lille', 'rennes'];
+    
+    for (const city of cities) {
+      if (locationPrefs.includes(city)) {
+        return city.charAt(0).toUpperCase() + city.slice(1) + ', France';
+      }
+    }
+    
+    return null;
   }
 }
 
