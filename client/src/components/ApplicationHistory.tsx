@@ -106,6 +106,13 @@ export default function ApplicationHistory() {
                           variant="ghost"
                           size="sm"
                           className="text-primary hover:text-primary/80"
+                          onClick={() => {
+                            toast({
+                              title: "Capture d'écran",
+                              description: `Affichage de la capture pour ${application.jobTitle}`,
+                            });
+                            // TODO: Ouvrir modal avec screenshot
+                          }}
                         >
                           <Eye className="w-4 h-4" />
                         </Button>
@@ -113,6 +120,29 @@ export default function ApplicationHistory() {
                           variant="ghost"
                           size="sm"
                           className="text-gray-400 hover:text-gray-600"
+                          onClick={() => {
+                            const logData = `
+CANDIDATURE - ${application.jobTitle}
+Entreprise: ${application.company}
+Localisation: ${application.location}
+Statut: ${application.status}
+Date: ${new Date(application.appliedAt).toLocaleString('fr-FR')}
+${application.errorMessage ? `Erreur: ${application.errorMessage}` : 'Candidature envoyée avec succès'}
+                            `.trim();
+                            
+                            const blob = new Blob([logData], { type: 'text/plain' });
+                            const url = URL.createObjectURL(blob);
+                            const a = document.createElement('a');
+                            a.href = url;
+                            a.download = `candidature-${application.company.replace(/\s+/g, '-')}-${application.id}.txt`;
+                            a.click();
+                            URL.revokeObjectURL(url);
+                            
+                            toast({
+                              title: "Fichier téléchargé",
+                              description: `Rapport de candidature pour ${application.company}`,
+                            });
+                          }}
                         >
                           <Download className="w-4 h-4" />
                         </Button>
