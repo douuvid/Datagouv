@@ -20,7 +20,6 @@ const formSchema = insertUserConfigSchema.extend({
   message: z.string().min(10, "Le message doit contenir au moins 10 caractères"),
   searchKeywords: z.string().optional(),
   searchLocation: z.string().optional(),
-  jobTypes: z.string().optional(),
   educationLevel: z.string().optional(),
   searchRadius: z.string().optional(),
 });
@@ -51,7 +50,6 @@ Cordialement,
 [Prénom Nom]`,
       searchKeywords: userConfig?.searchKeywords || "",
       searchLocation: userConfig?.searchLocation || "",
-      jobTypes: userConfig?.jobTypes || "",
       educationLevel: userConfig?.educationLevel || "",
       searchRadius: userConfig?.searchRadius || "",
     },
@@ -205,23 +203,7 @@ Cordialement,
                 )}
               />
 
-              <FormField
-                control={form.control}
-                name="jobTypes"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Types de contrat</FormLabel>
-                    <FormControl>
-                      <Input 
-                        placeholder="alternance, stage, apprentissage" 
-                        {...field}
-                        value={field.value || ''}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+
 
               <div className="grid grid-cols-2 gap-4">
                 <FormField

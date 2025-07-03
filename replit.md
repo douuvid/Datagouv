@@ -117,6 +117,13 @@ This is a full-stack automation application for alternance (internship) job appl
   - Affichage des erreurs dans l'historique des candidatures
   - Boutons d'action pour captures d'écran et téléchargement de rapports
 
+- July 03, 2025: Niveaux de formation et simplification interface
+  - Ajout des niveaux de formation exacts d'alternance.gouv.fr
+  - Configuration du rayon de recherche (10km à toute la France)
+  - Suppression du champ "Type d'emploi" - focus uniquement alternance
+  - Correction des erreurs React et interface fonctionnelle
+  - Scripts Python mis à jour avec nouveaux paramètres
+
 - July 03, 2025: Initial setup
 
 ## User Preferences
