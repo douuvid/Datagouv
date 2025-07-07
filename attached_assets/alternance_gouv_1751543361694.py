@@ -17,17 +17,17 @@ PAUSE_APRES_POSTULATION = False  # Mettre en pause après ouverture du formulair
 
 # Import des fonctions auxiliaires
 try:
-    from postuler_functions import remplir_formulaire_candidature, postuler_offre, AUTO_REMPLIR_FORMULAIRE, AUTO_ENVOYER_CANDIDATURE
+    from postuler_functions_1751543385370 import remplir_formulaire_candidature, postuler_offre, AUTO_REMPLIR_FORMULAIRE, AUTO_ENVOYER_CANDIDATURE
     POSTULER_FUNCTIONS_LOADED = True
 except ImportError:
-    logger.warning("Module postuler_functions non trouvé, la postulation automatisée ne sera pas disponible")
+    print("Module postuler_functions non trouvé, la postulation automatisée ne sera pas disponible")
     POSTULER_FUNCTIONS_LOADED = False
 
 try:
-    from capture_functions import capture_and_highlight, switch_to_iframe_if_needed
+    from capture_functions_1751543392689 import capture_and_highlight, switch_to_iframe_if_needed
     CAPTURE_FUNCTIONS_LOADED = True
 except ImportError:
-    logger.warning("Module capture_functions non trouvé, les fonctions de capture améliorées ne seront pas disponibles")
+    print("Module capture_functions non trouvé, les fonctions de capture améliorées ne seront pas disponibles")
     CAPTURE_FUNCTIONS_LOADED = False
     
     # Fonction de remplacement simple si le module n'est pas disponible
@@ -39,7 +39,7 @@ except ImportError:
             driver.save_screenshot(filename)
             return filename
         except Exception as e:
-            logger.error(f"Erreur lors de la capture: {e}")
+            print(f"Erreur lors de la capture: {e}")
             return None
             
     def switch_to_iframe_if_needed(driver):
@@ -68,7 +68,6 @@ from selenium.common.exceptions import (
 from bs4 import BeautifulSoup
 from selenium.webdriver.chrome.service import Service as ChromeService
 from webdriver_manager.chrome import ChromeDriverManager
-from database.user_database import UserDatabase
 
 # Configuration du logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -1988,11 +1987,24 @@ def run_scraper(user_data):
                 # Basculer vers l'iframe
                 logger.info("Basculement vers l'iframe La bonne alternance...")
                 driver.switch_to.frame(labonne_iframe)
+                print("=== PAUSE POUR INSPECTION MANUELLE : 120 secondes ===")
+                time.sleep(120)
                 
                 # Attendre que le contenu de l'iframe se charge complètement
                 try:
                     WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.CSS_SELECTOR, ".fr-card, div[role='group'], .chakra-stack")))
                     logger.info("Contenu de l'iframe chargé avec succès")
+                    try:
+                        formations_checkbox = WebDriverWait(driver, 10).until(
+                            EC.presence_of_element_located((By.CSS_SELECTOR, "input[type='checkbox'][name='formations']"))
+                        )
+                        if formations_checkbox.is_selected():
+                            driver.execute_script("arguments[0].click();", formations_checkbox)
+                            logger.info("Case 'Formations' décochée dans la zone de filtres après la recherche.")
+                        else:
+                            logger.info("Case 'Formations' déjà décochée dans la zone de filtres.")
+                    except Exception as e:
+                        logger.warning(f"Impossible de décocher la case 'Formations' dans la zone de filtres : {e}")
                 except TimeoutException:
                     logger.warning("Timeout en attendant le chargement du contenu de l'iframe - continuons quand même")
                 
@@ -2058,8 +2070,22 @@ def run_scraper(user_data):
                 # Récupérer les URL de base pour les liens relatifs
                 base_url = "https://labonnealternance.apprentissage.beta.gouv.fr"
                 
+                # Filtrer les cartes pour ignorer les formations
+                filtered_cards = []
+                for card in valid_cards:
+                    try:
+                        tag = card.find_element(By.CSS_SELECTOR, ".chakra-text.mui-ulcbns").text.strip()
+                        if tag.upper() == "FORMATION":
+                            continue  # ignorer les formations
+                        filtered_cards.append(card)
+                    except Exception:
+                        # Si le tag n'existe pas, c'est peut-être une offre d'emploi
+                        filtered_cards.append(card)
+
+                logger.info(f"Nombre de cartes après filtrage des formations: {len(filtered_cards)}")
+
                 # Extraire les informations de chaque carte d'offre/formation
-                for index, card in enumerate(valid_cards):
+                for index, card in enumerate(filtered_cards):
                     try:
                         # Capturer le HTML complet de la carte pour le debug
                         card_html = card.get_attribute('outerHTML')
@@ -2311,7 +2337,8 @@ def run_scraper(user_data):
                         # Filtrer uniquement les offres qui ne sont pas des formations
                         if offer_type == "Formation":
                             # Enregistrer le détail de la formation ignorée pour débogage
-                            logger.info(f"Formation ignorée: {card.text.replace('\n', ' ')[:100]}")
+                            text_clean = card.text.replace('\n', ' ')
+                            logger.info(f"Formation ignorée: {text_clean[:100]}")
                             continue
                         
                         # Créer un dictionnaire avec les informations de l'offre
@@ -2484,7 +2511,7 @@ def main():
     
     logger.info(f"Recherche de l'utilisateur : {user_email}")
     db = UserDatabase()
-    user_data = db.get_user_by_email(user_email)
+    user_data = db.get_user_data()
     db.close()
     
     if not user_data:

@@ -35,12 +35,12 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      delayBetweenApplications: settings?.delayBetweenApplications || 30,
-      maxApplicationsPerSession: settings?.maxApplicationsPerSession || 50,
-      autoFillForm: settings?.autoFillForm ?? true,
-      autoSendApplication: settings?.autoSendApplication ?? true,
-      pauseBeforeSend: settings?.pauseBeforeSend ?? false,
-      captureScreenshots: settings?.captureScreenshots ?? true,
+      delayBetweenApplications: (settings as any)?.delayBetweenApplications || 30,
+      maxApplicationsPerSession: (settings as any)?.maxApplicationsPerSession || 50,
+      autoFillForm: (settings as any)?.autoFillForm ?? true,
+      autoSendApplication: (settings as any)?.autoSendApplication ?? true,
+      pauseBeforeSend: (settings as any)?.pauseBeforeSend ?? false,
+      captureScreenshots: (settings as any)?.captureScreenshots ?? true,
     },
   });
 
@@ -48,12 +48,12 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
   React.useEffect(() => {
     if (settings) {
       form.reset({
-        delayBetweenApplications: settings.delayBetweenApplications,
-        maxApplicationsPerSession: settings.maxApplicationsPerSession,
-        autoFillForm: settings.autoFillForm,
-        autoSendApplication: settings.autoSendApplication,
-        pauseBeforeSend: settings.pauseBeforeSend,
-        captureScreenshots: settings.captureScreenshots,
+        delayBetweenApplications: (settings as any).delayBetweenApplications,
+        maxApplicationsPerSession: (settings as any).maxApplicationsPerSession,
+        autoFillForm: (settings as any).autoFillForm,
+        autoSendApplication: (settings as any).autoSendApplication,
+        pauseBeforeSend: (settings as any).pauseBeforeSend,
+        captureScreenshots: (settings as any).captureScreenshots,
       });
     }
   }, [settings, form]);
@@ -141,7 +141,7 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                 <FormItem className="flex flex-row items-start space-x-3 space-y-0">
                   <FormControl>
                     <Checkbox
-                      checked={field.value}
+                      checked={field.value || false}
                       onCheckedChange={field.onChange}
                     />
                   </FormControl>
@@ -159,7 +159,7 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                 <FormItem className="flex flex-row items-start space-x-3 space-y-0">
                   <FormControl>
                     <Checkbox
-                      checked={field.value}
+                      checked={field.value || false}
                       onCheckedChange={field.onChange}
                     />
                   </FormControl>
@@ -177,7 +177,7 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                 <FormItem className="flex flex-row items-start space-x-3 space-y-0">
                   <FormControl>
                     <Checkbox
-                      checked={field.value}
+                      checked={field.value || false}
                       onCheckedChange={field.onChange}
                     />
                   </FormControl>
@@ -195,7 +195,7 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                 <FormItem className="flex flex-row items-start space-x-3 space-y-0">
                   <FormControl>
                     <Checkbox
-                      checked={field.value}
+                      checked={field.value || false}
                       onCheckedChange={field.onChange}
                     />
                   </FormControl>

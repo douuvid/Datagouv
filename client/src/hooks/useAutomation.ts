@@ -76,10 +76,9 @@ export function useAutomation() {
 
   return {
     status,
-    isLoading,
+    isLoading: isLoading || startAutomation.isPending || pauseAutomation.isPending || stopAutomation.isPending,
     startAutomation: () => startAutomation.mutate(),
     pauseAutomation: () => pauseAutomation.mutate(),
     stopAutomation: () => stopAutomation.mutate(),
-    isLoading: startAutomation.isPending || pauseAutomation.isPending || stopAutomation.isPending,
   };
 }

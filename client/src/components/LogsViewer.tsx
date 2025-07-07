@@ -121,12 +121,12 @@ export default function LogsViewer() {
             <div className="text-center py-4">
               <span className="text-gray-500">Chargement des logs...</span>
             </div>
-          ) : !logs || logs.length === 0 ? (
+          ) : !logs || !Array.isArray(logs) || logs.length === 0 ? (
             <div className="text-center py-4">
               <span className="text-gray-500">Aucun log disponible</span>
             </div>
           ) : (
-            logs.map((log: any) => (
+            Array.isArray(logs) && logs.map((log: any) => (
               <div key={log.id} className="mb-1">
                 <span className="text-gray-500">{format(new Date(log.timestamp), 'yyyy-MM-dd HH:mm:ss')}</span>
                 <span className={`ml-2 ${getLevelColor(log.level)}`}>{log.level.toUpperCase()}</span>

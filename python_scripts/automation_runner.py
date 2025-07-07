@@ -10,6 +10,7 @@ import logging
 import traceback
 from datetime import datetime
 from typing import Dict, Any, Optional
+import time
 
 # Add the attached_assets directory to the Python path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'attached_assets'))
@@ -17,8 +18,8 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'attached_asset
 # Import the main automation script
 try:
     from alternance_gouv_1751543361694 import run_scraper, setup_driver, parse_results
-    from postuler_functions import postuler_offre, remplir_formulaire_candidature
-    from capture_functions import capture_and_highlight, switch_to_iframe_if_needed
+    from postuler_functions_1751543385370 import postuler_offre, remplir_formulaire_candidature
+    from capture_functions_1751543392689 import capture_and_highlight, switch_to_iframe_if_needed
     SCRIPTS_LOADED = True
 except ImportError as e:
     logging.error(f"Failed to import automation scripts: {e}")
@@ -224,7 +225,7 @@ class AutomationRunner:
             self.log_message('info', f'Recherche avec les critères: {search_params}')
             
             # Run the scraper to get job offers
-            offers = run_scraper(search_params)
+            offers = run_scraper(self.user_config)
             
             if not offers:
                 self.log_message('warning', 'Aucune offre trouvée avec les critères spécifiés')

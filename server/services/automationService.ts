@@ -151,7 +151,7 @@ class AutomationService {
 
     return {
       isRunning,
-      currentSession: session,
+      currentSession: session || null,
       statistics,
     };
   }

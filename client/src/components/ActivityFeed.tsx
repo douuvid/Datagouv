@@ -10,7 +10,7 @@ export default function ActivityFeed() {
     refetchInterval: 5000, // Refresh every 5 seconds
   });
 
-  const recentLogs = logs?.slice(0, 10) || [];
+  const recentLogs = Array.isArray(logs) ? logs.slice(0, 10) : [];
 
   const getIcon = (level: string) => {
     switch (level) {

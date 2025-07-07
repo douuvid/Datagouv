@@ -22,8 +22,8 @@ export default function Dashboard() {
 
   useWebSocket();
 
-  const isRunning = status?.isRunning || false;
-  const statistics = status?.statistics || {
+  const isRunning = (status as any)?.isRunning || false;
+  const statistics = (status as any)?.statistics || {
     totalApplications: 0,
     successfulApplications: 0,
     failedApplications: 0,

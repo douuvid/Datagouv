@@ -19,7 +19,7 @@ class FileService {
     });
   }
 
-  async saveDocument(file: Express.Multer.File, type: 'cv' | 'cover-letter'): Promise<string> {
+  async saveDocument(file: any, type: 'cv' | 'cover-letter'): Promise<string> {
     const extension = path.extname(file.originalname);
     const filename = `${type}_${Date.now()}${extension}`;
     const filepath = path.join(this.uploadsDir, filename);

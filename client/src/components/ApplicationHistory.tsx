@@ -60,7 +60,7 @@ export default function ApplicationHistory() {
           <div className="text-center py-8">
             <span className="text-gray-500">Chargement de l'historique...</span>
           </div>
-        ) : !applications || applications.length === 0 ? (
+        ) : !applications || !Array.isArray(applications) || applications.length === 0 ? (
           <div className="text-center py-8">
             <span className="text-gray-500">Aucune candidature trouvée</span>
           </div>
@@ -77,7 +77,7 @@ export default function ApplicationHistory() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {applications.map((application: any) => (
+                {Array.isArray(applications) && applications.map((application: any) => (
                   <TableRow key={application.id} className="hover:bg-gray-50">
                     <TableCell className="text-sm text-gray-900">
                       {format(new Date(application.appliedAt), 'PPpp', { locale: fr })}

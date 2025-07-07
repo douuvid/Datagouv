@@ -71,12 +71,12 @@ export class MemStorage implements IStorage {
 
   async createUserConfig(config: InsertUserConfig): Promise<UserConfig> {
     const id = this.getNextId();
-    const userConfig: UserConfig = {
+    const userConfig = {
       ...config,
       id,
       createdAt: new Date(),
       updatedAt: new Date(),
-    };
+    } as UserConfig;
     this.userConfigs.set(id, userConfig);
     return userConfig;
   }
@@ -110,7 +110,7 @@ export class MemStorage implements IStorage {
 
   async createAutomationSession(session: InsertAutomationSession): Promise<AutomationSession> {
     const id = this.getNextId();
-    const automationSession: AutomationSession = {
+    const automationSession = {
       ...session,
       id,
       startedAt: new Date(),
@@ -118,7 +118,7 @@ export class MemStorage implements IStorage {
       totalApplications: 0,
       successfulApplications: 0,
       failedApplications: 0,
-    };
+    } as AutomationSession;
     this.automationSessions.set(id, automationSession);
     return automationSession;
   }
@@ -147,11 +147,11 @@ export class MemStorage implements IStorage {
 
   async createApplication(application: InsertApplication): Promise<Application> {
     const id = this.getNextId();
-    const app: Application = {
+    const app = {
       ...application,
       id,
       appliedAt: new Date(),
-    };
+    } as Application;
     this.applications.set(id, app);
     return app;
   }
@@ -180,11 +180,11 @@ export class MemStorage implements IStorage {
 
   async createAutomationLog(log: InsertAutomationLog): Promise<AutomationLog> {
     const id = this.getNextId();
-    const automationLog: AutomationLog = {
+    const automationLog = {
       ...log,
       id,
       timestamp: new Date(),
-    };
+    } as AutomationLog;
     this.automationLogs.set(id, automationLog);
     return automationLog;
   }
@@ -212,11 +212,11 @@ export class MemStorage implements IStorage {
 
   async createScreenshot(screenshot: InsertScreenshot): Promise<Screenshot> {
     const id = this.getNextId();
-    const screenshotRecord: Screenshot = {
+    const screenshotRecord = {
       ...screenshot,
       id,
       capturedAt: new Date(),
-    };
+    } as Screenshot;
     this.screenshots.set(id, screenshotRecord);
     return screenshotRecord;
   }
@@ -228,12 +228,12 @@ export class MemStorage implements IStorage {
 
   async createAutomationSettings(settings: InsertAutomationSettings): Promise<AutomationSettings> {
     const id = this.getNextId();
-    const automationSettings: AutomationSettings = {
+    const automationSettings = {
       ...settings,
       id,
       createdAt: new Date(),
       updatedAt: new Date(),
-    };
+    } as AutomationSettings;
     this.automationSettings.set(id, automationSettings);
     return automationSettings;
   }

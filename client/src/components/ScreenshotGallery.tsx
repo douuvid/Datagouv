@@ -11,7 +11,7 @@ export default function ScreenshotGallery() {
     refetchInterval: 10000, // Refresh every 10 seconds
   });
 
-  const recentScreenshots = screenshots?.slice(0, 6) || [];
+  const recentScreenshots = Array.isArray(screenshots) ? screenshots.slice(0, 6) : [];
 
   if (isLoading) {
     return (
