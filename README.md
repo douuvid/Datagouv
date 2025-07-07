@@ -64,4 +64,4 @@ Le système affiche en temps réel :
 
 ## ⚠️ Important
 
-Ce système utilise l'automatisation web pour faciliter les candidatures. Assurez-vous de respecter les conditions d'utilisation du site alternance.gouv.fr et utilisez le système de manière responsable.
+Ce système utilise l'automatisation web pour faciliter les candidatures. Assurez-vous de respecter les conditions d'utilisation du site alternance.gouv.fr et utilisez le système de manière responsable.# tracker-
