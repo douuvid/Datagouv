@@ -9,7 +9,7 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import NoSuchElementException, TimeoutException, StaleElementReferenceException
 from selenium.webdriver.common.action_chains import ActionChains
 from selenium.webdriver.common.keys import Keys # Added for robust clearing
-
+from selenium.webdriver.common.action_chains import ActionChains
 # Configuration du logging
 logger = logging.getLogger(__name__)
 if not logger.handlers:
@@ -555,13 +555,39 @@ def postuler_offre(driver, url_offre, titre_offre, user_data=None):
         # Attendre que la page soit chargée
         wait = WebDriverWait(driver, 15)
         
-        # --- AJOUT : Clic explicite sur le bouton 'J'envoie ma candidature' si présent ---
+        # --- AJOUT : Clic robuste sur le bouton 'J\'envoie ma candidature' (data-testid='postuler-button') ---
+        
         try:
+            print("Recherche du bouton 'J'envoie ma candidature' (data-testid='postuler-button')...")
             postuler_btn = wait.until(EC.element_to_be_clickable((By.CSS_SELECTOR, "button[data-testid='postuler-button']")))
-            postuler_btn.click()
-            logger.info("✅ Clic explicite sur 'J'envoie ma candidature' (data-testid='postuler-button') effectué")
+            driver.execute_script("arguments[0].scrollIntoView({behavior: 'smooth', block: 'center'});", postuler_btn)
+            time.sleep(0.5)
+            try:
+                postuler_btn.click()
+                print("✅ Clic standard sur 'J'envoie ma candidature' effectué")
+                logger.info("✅ Clic standard sur 'J'envoie ma candidature' effectué")
+            except Exception as e:
+                print(f"⚠️ Clic standard échoué : {e}, tentative via JavaScript...")
+                logger.warning(f"Clic standard échoué : {e}, tentative via JavaScript...")
+                try:
+                    driver.execute_script("arguments[0].click();", postuler_btn)
+                    print("✅ Clic via JavaScript effectué")
+                    logger.info("✅ Clic via JavaScript effectué")
+                except Exception as js_e:
+                    print(f"⚠️ Clic JS échoué : {js_e}, tentative via ActionChains...")
+                    logger.warning(f"Clic JS échoué : {js_e}, tentative via ActionChains...")
+                    try:
+                        ActionChains(driver).move_to_element(postuler_btn).click().perform()
+                        print("✅ Clic via ActionChains effectué")
+                        logger.info("✅ Clic via ActionChains effectué")
+                    except Exception as ac_e:
+                        print(f"❌ Toutes les tentatives de clic ont échoué : {ac_e}")
+                        logger.error(f"Toutes les tentatives de clic ont échoué : {ac_e}")
+                        driver.save_screenshot("debug_screenshots/echec_clic_postuler_btn.png")
         except Exception as e:
-            logger.debug(f"Bouton explicite 'J'envoie ma candidature' non trouvé ou non cliquable : {e}")
+            print(f"❌ Bouton 'J'envoie ma candidature' non trouvé ou non cliquable : {e}")
+            logger.error(f"Bouton 'J'envoie ma candidature' non trouvé ou non cliquable : {e}")
+            driver.save_screenshot("debug_screenshots/postuler_btn_non_trouve.png")
         # --- FIN AJOUT ---
 
         # Vérifier si c'est une candidature spontanée sans contact (impossible de postuler)

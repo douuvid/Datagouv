@@ -26,6 +26,8 @@ from bs4 import BeautifulSoup
 from selenium.webdriver.chrome.service import Service as ChromeService
 from webdriver_manager.chrome import ChromeDriverManager
 from typing import Optional, Any, Dict
+import argparse
+import os
 
 # Configuration pour la postulation automatique
 AUTO_POSTULER = True  # Activer/désactiver la postulation automatique
@@ -1983,7 +1985,7 @@ def run_scraper(user_data):
                 logger.info("Basculement vers l'iframe La bonne alternance...")
                 driver.switch_to.frame(labonne_iframe)
                 print("=== PAUSE POUR INSPECTION MANUELLE : 120 secondes ===")
-                time.sleep(120)
+                time.sleep(7)
                 
                 # Attendre que le contenu de l'iframe se charge complètement
                 try:
@@ -2395,7 +2397,7 @@ def run_scraper(user_data):
                                     driver.find_element(By.CSS_SELECTOR, 'input[data-testid="firstName"]').clear()
                                     driver.find_element(By.CSS_SELECTOR, 'input[data-testid="firstName"]').send_keys("Jean")
                                     driver.find_element(By.CSS_SELECTOR, 'input[data-testid="email"]').clear()
-                                    driver.find_element(By.CSS_SELECTOR, 'input[data-testid="email"]').send_keys("jean.dupont@example.com")
+                                    driver.find_element(By.CSS_SELECTOR, 'input[data-testid="email"]').send_keys("silasiharis@gmail.com")
                                     driver.find_element(By.CSS_SELECTOR, 'input[data-testid="phone"]').clear()
                                     driver.find_element(By.CSS_SELECTOR, 'input[data-testid="phone"]').send_keys("0601020304")
                                     driver.find_element(By.CSS_SELECTOR, 'textarea[data-testid="message"]').clear()
@@ -2424,9 +2426,11 @@ def run_scraper(user_data):
                                     # 5. Clic sur le bouton final d'envoi
                                     logger.info("Recherche du bouton final 'J'envoie ma candidature' (candidature-not-sent)...")
                                     final_btn = wait.until(EC.element_to_be_clickable((By.CSS_SELECTOR, 'button[data-testid="candidature-not-sent"][type="submit"]')))
+                                    time.sleep(7)
                                     final_btn.click()
                                     logger.info("Candidature envoyée avec succès.")
-                                    time.sleep(2)
+                                      # Pause pour laisser le site traiter la soumission
+                                    time.sleep(15)
                                 except Exception as e:
                                     logger.error(f"Erreur lors de la postulation automatique : {e}")
                                 finally:
@@ -2535,8 +2539,8 @@ def parse_results(html_content):
         logger.error(f"Erreur lors de l'analyse des résultats: {e}", exc_info=True)
 
 def main():
-    user_email = 'test@example.com' # Email par défaut pour le test
-    if len(sys.argv) > 1 and sys.argv[1] != 'test@example.com':
+    user_email = 'test@gmail.com' # Email par défaut pour le test
+    if len(sys.argv) > 1 and sys.argv[1] != 'test@gmail.com':
         user_email = sys.argv[1]
     
     logger.info(f"Recherche de l'utilisateur : {user_email}")
@@ -2550,8 +2554,7 @@ def main():
 
 def setup_and_run():
     """Fonction principale pour configurer les paramètres et lancer le scraper"""
-    import argparse
-    import os
+   
     
     # Variables globales à modifier
     global AUTO_POSTULER, PAUSE_APRES_POSTULATION
@@ -2619,7 +2622,7 @@ def setup_and_run():
         if args.email:
             user_data['email'] = args.email
         else:
-            user_data['email'] = 'test@example.com'
+            user_data['email'] = 'test@gmail.com'
             
         if args.metier:
             user_data['search_query'] = args.metier
