@@ -10,6 +10,22 @@ import unicodedata
 import base64
 import random
 from urllib.parse import urlparse, unquote, parse_qs
+from postuler_functions_1751543385370 import remplir_formulaire_candidature, postuler_offre, AUTO_REMPLIR_FORMULAIRE, AUTO_ENVOYER_CANDIDATURE
+from capture_functions_1751543392689 import capture_and_highlight, switch_to_iframe_if_needed
+from selenium import webdriver
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.common.keys import Keys
+from selenium.webdriver.common.action_chains import ActionChains
+from selenium.common.exceptions import (
+    TimeoutException, ElementClickInterceptedException, 
+    StaleElementReferenceException, WebDriverException, ElementNotInteractableException
+)
+from bs4 import BeautifulSoup
+from selenium.webdriver.chrome.service import Service as ChromeService
+from webdriver_manager.chrome import ChromeDriverManager
+from typing import Optional, Any, Dict
 
 # Configuration pour la postulation automatique
 AUTO_POSTULER = True  # Activer/désactiver la postulation automatique
@@ -17,14 +33,12 @@ PAUSE_APRES_POSTULATION = False  # Mettre en pause après ouverture du formulair
 
 # Import des fonctions auxiliaires
 try:
-    from postuler_functions_1751543385370 import remplir_formulaire_candidature, postuler_offre, AUTO_REMPLIR_FORMULAIRE, AUTO_ENVOYER_CANDIDATURE
     POSTULER_FUNCTIONS_LOADED = True
 except ImportError:
     print("Module postuler_functions non trouvé, la postulation automatisée ne sera pas disponible")
     POSTULER_FUNCTIONS_LOADED = False
 
 try:
-    from capture_functions_1751543392689 import capture_and_highlight, switch_to_iframe_if_needed
     CAPTURE_FUNCTIONS_LOADED = True
 except ImportError:
     print("Module capture_functions non trouvé, les fonctions de capture améliorées ne seront pas disponibles")
@@ -55,19 +69,6 @@ except ImportError:
 project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 sys.path.insert(0, project_root)
 
-from selenium import webdriver
-from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
-from selenium.webdriver.common.keys import Keys
-from selenium.webdriver.common.action_chains import ActionChains
-from selenium.common.exceptions import (
-    TimeoutException, ElementClickInterceptedException, 
-    StaleElementReferenceException, WebDriverException, ElementNotInteractableException
-)
-from bs4 import BeautifulSoup
-from selenium.webdriver.chrome.service import Service as ChromeService
-from webdriver_manager.chrome import ChromeDriverManager
 
 # Configuration du logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -75,20 +76,7 @@ logger = logging.getLogger(__name__)
 
 # --- Fonctions auxiliaires ---
 
-def capture_and_highlight(driver, element, description):
-    """Capture un screenshot avec mise en évidence d'un élément"""
-    try:
-        filename = f"debug_screenshots/{description.replace(' ', '_')}.png"
-        # Mise en évidence de l'élément
-        driver.execute_script(
-            "arguments[0].style.border='3px solid red'; arguments[0].style.boxShadow='0 0 10px red';", 
-            element
-        )
-        time.sleep(0.5)  # Petite pause pour l'animation
-        driver.save_screenshot(filename)
-        logger.info(f"Capture d'écran de {description} enregistrée dans {filename}")
-    except Exception as e:
-        logger.warning(f"Impossible de capturer l'écran pour {description}: {e}")
+
 
 
 def switch_to_iframe_if_needed(driver):
@@ -380,7 +368,9 @@ def setup_driver():
     options.add_experimental_option('useAutomationExtension', False)
     
     # Désactiver le mode headless pour permettre les interactions visuelles
-    options.headless = False
+    # options.headless = False  # Supprimé car obsolète
+    # Pour le mode headless, décommente la ligne suivante :
+    # options.add_argument("--headless=new")
     
     # Simuler un user-agent avec DevTools ouverts
     options.add_argument("user-agent=Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Safari/537.36 Chrome-Lighthouse")
@@ -1749,7 +1739,9 @@ def run_scraper(user_data):
                 # Recherche par texte (moins fiable mais solution de secours)
                 buttons = driver.find_elements(By.TAG_NAME, "button")
                 for button in buttons:
-                    if "parti" in button.text or "search" in button.text.lower() or "submit" in button.get_attribute("class").lower():
+                    text = button.text or ""
+                    btn_class = button.get_attribute("class") or ""
+                    if "parti" in text or "search" in text.lower() or "submit" in btn_class.lower():
                         submit_button = button
                         logger.info(f"Bouton de soumission trouvé avec le texte: {button.text}")
                         break
@@ -1789,7 +1781,9 @@ def run_scraper(user_data):
                 # Recherche par texte (moins fiable mais solution de secours)
                 buttons = driver.find_elements(By.TAG_NAME, "button")
                 for button in buttons:
-                    if "parti" in button.text or "search" in button.text.lower() or "submit" in button.get_attribute("class").lower():
+                    text = button.text or ""
+                    btn_class = button.get_attribute("class") or ""
+                    if "parti" in text or "search" in text.lower() or "submit" in btn_class.lower():
                         submit_button = button
                         logger.info(f"Bouton de soumission trouvé avec le texte: {button.text}")
                         break
@@ -1845,7 +1839,8 @@ def run_scraper(user_data):
                         # Vérifier si une iframe La bonne alternance est présente
                         iframes = driver.find_elements(By.TAG_NAME, "iframe")
                         for iframe in iframes:
-                            if "labonnealternance" in iframe.get_attribute("src"):
+                            src = iframe.get_attribute("src")
+                            if src and "labonnealternance" in src:
                                 logger.info(f"Iframe La bonne alternance détectée: {iframe.get_attribute('src')}")
                                 break
                         
@@ -2066,6 +2061,8 @@ def run_scraper(user_data):
                         continue
                 
                 logger.info(f"Nombre total de cartes valides: {len(valid_cards)}")
+                # AJOUT : Log explicite du nombre total d'offres détectées (hors formations)
+                logger.info(f"=== NOMBRE TOTAL D'OFFRES DÉTECTÉES (hors formations) : {len(valid_cards)} ===")
                 
                 # Récupérer les URL de base pour les liens relatifs
                 base_url = "https://labonnealternance.apprentissage.beta.gouv.fr"
@@ -2083,7 +2080,7 @@ def run_scraper(user_data):
                         filtered_cards.append(card)
 
                 logger.info(f"Nombre de cartes après filtrage des formations: {len(filtered_cards)}")
-
+                
                 # Extraire les informations de chaque carte d'offre/formation
                 for index, card in enumerate(filtered_cards):
                     try:
@@ -2352,56 +2349,89 @@ def run_scraper(user_data):
                             "postulation_status": "non_postulé"  # Statut initial
                         }
                         
-                        # Option pour postuler automatiquement à l'offre
+                        # --- Bloc de postulation automatique robuste pour La Bonne Alternance ---
                         if link and AUTO_POSTULER:
                             logger.info(f"Tentative de postulation automatique pour: {title} chez {company}")
-                            
-                            # Sauvegarder l'état actuel du navigateur
                             current_url = driver.current_url
                             current_handles = driver.window_handles
                             main_handle = driver.current_window_handle
-                            
-                            # Tenter de postuler
                             driver.execute_script("window.open(arguments[0], '_blank');", link)
                             time.sleep(2)
-                            
-                            # Basculer vers le nouvel onglet
                             new_handles = [handle for handle in driver.window_handles if handle != main_handle]
                             if new_handles:
                                 driver.switch_to.window(new_handles[0])
-                                
-                                # Appliquer la fonction de postulation, si elle est disponible
-                                if POSTULER_FUNCTIONS_LOADED:
-                                    # Fermer les onglets précédemment ouverts car la fonction postuler_offre gère ses propres onglets
+                                # Vérifier si l'offre redirige vers un site externe (HelloWork, Meteojob, etc.)
+                                external_domains = ["hellowork.com", "meteojob.com", "jobteaser.com", "apec.fr"]
+                                current_url = driver.current_url
+                                if any(domain in current_url for domain in external_domains):
+                                    logger.info(f"Redirection externe détectée ({current_url}), on passe à l'offre suivante via le bouton 'next'.")
+                                    if driver.current_window_handle != main_handle:
+                                        driver.close()
+                                        driver.switch_to.window(main_handle)
+                                    try:
+                                        next_btn = driver.find_element(By.CSS_SELECTOR, "button[data-testid='next-button']")
+                                        driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", next_btn)
+                                        time.sleep(0.5)
+                                        next_btn.click()
+                                        logger.info("Bouton 'next' cliqué pour passer à l'offre suivante.")
+                                        time.sleep(2)
+                                    except Exception as e:
+                                        logger.warning(f"Impossible de cliquer sur le bouton 'next' : {e}")
+                                    continue
+                                try:
+                                    wait = WebDriverWait(driver, 20)
+                                    # 1. Clic sur le premier bouton "J'envoie ma candidature"
+                                    logger.info("Recherche du bouton 'J'envoie ma candidature' (postuler-button)...")
+                                    postuler_btn = wait.until(EC.element_to_be_clickable((By.CSS_SELECTOR, 'div[data-testid="CandidatureSpontanee"] button[data-testid="postuler-button"]')))
+                                    postuler_btn.click()
+                                    logger.info("Bouton 'J'envoie ma candidature' cliqué.")
+                                    # 2. Attendre l'apparition du formulaire modal
+                                    logger.info("Attente de l'apparition du formulaire modal...")
+                                    wait.until(EC.visibility_of_element_located((By.CSS_SELECTOR, 'section.chakra-modal__content[role="dialog"] form[data-sentry-component="CandidatureLbaModalBody"]')))
+                                    # 3. Remplir les champs obligatoires
+                                    logger.info("Remplissage des champs du formulaire...")
+                                    driver.find_element(By.CSS_SELECTOR, 'input[data-testid="lastName"]').clear()
+                                    driver.find_element(By.CSS_SELECTOR, 'input[data-testid="lastName"]').send_keys("DUPONT")
+                                    driver.find_element(By.CSS_SELECTOR, 'input[data-testid="firstName"]').clear()
+                                    driver.find_element(By.CSS_SELECTOR, 'input[data-testid="firstName"]').send_keys("Jean")
+                                    driver.find_element(By.CSS_SELECTOR, 'input[data-testid="email"]').clear()
+                                    driver.find_element(By.CSS_SELECTOR, 'input[data-testid="email"]').send_keys("jean.dupont@example.com")
+                                    driver.find_element(By.CSS_SELECTOR, 'input[data-testid="phone"]').clear()
+                                    driver.find_element(By.CSS_SELECTOR, 'input[data-testid="phone"]').send_keys("0601020304")
+                                    driver.find_element(By.CSS_SELECTOR, 'textarea[data-testid="message"]').clear()
+                                    driver.find_element(By.CSS_SELECTOR, 'textarea[data-testid="message"]').send_keys("Je suis très motivé par cette alternance.")
+                                    # 4. Upload du CV (s'assurer que le fichier n'est pas vide !)
+                                    cv_path = "/Users/davidravin/Desktop/objet.pdf"  # CV réel de l'utilisateur
+                                    if not os.path.exists(cv_path) or os.path.getsize(cv_path) == 0:
+                                        logger.error("Le fichier CV est manquant ou vide, annulation de la candidature.")
+                                        driver.save_screenshot("debug_screenshots/cv_missing_or_empty.png")
+                                        driver.close()
+                                        driver.switch_to.window(main_handle)
+                                        continue
+                                    cv_input = driver.find_element(By.CSS_SELECTOR, 'div[data-testid="fileDropzone"] input[type="file"]')
+                                    cv_input.send_keys(cv_path)
+                                    logger.info("CV uploadé avec succès.")
+                                    time.sleep(2)
+                                    # 4.1 Cocher toutes les cases à cocher (checklist anti-bot)
+                                    checkboxes = driver.find_elements(By.CSS_SELECTOR, "input[type='checkbox']")
+                                    for checkbox in checkboxes:
+                                        try:
+                                            if checkbox.is_displayed() and not checkbox.is_selected():
+                                                driver.execute_script("arguments[0].click();", checkbox)
+                                                logger.info("Checkbox cochée (anti-bot)")
+                                        except Exception as e:
+                                            logger.warning(f"Impossible de cocher une checkbox: {e}")
+                                    # 5. Clic sur le bouton final d'envoi
+                                    logger.info("Recherche du bouton final 'J'envoie ma candidature' (candidature-not-sent)...")
+                                    final_btn = wait.until(EC.element_to_be_clickable((By.CSS_SELECTOR, 'button[data-testid="candidature-not-sent"][type="submit"]')))
+                                    final_btn.click()
+                                    logger.info("Candidature envoyée avec succès.")
+                                    time.sleep(2)
+                                except Exception as e:
+                                    logger.error(f"Erreur lors de la postulation automatique : {e}")
+                                finally:
                                     driver.close()
                                     driver.switch_to.window(main_handle)
-                                    
-                                    # Appeler la fonction de postulation avec les bons paramètres (driver, url, titre_offre)
-                                    result = postuler_offre(driver, link, f"{title} chez {company}")
-                                    
-                                    if result["status"] == "succes" or result["status"] == "formulaire_rempli":
-                                        job_offer["postulation_status"] = result["status"]
-                                        logger.info(f"✅ Candidature initiée pour: {title}")
-                                    else:
-                                        job_offer["postulation_status"] = "échec_postulation"
-                                        logger.warning(f"❌ Échec de la candidature pour: {title} - {result.get('raison', '')}")
-                                else:
-                                    # Utiliser l'ancienne méthode si le module de postulation n'est pas chargé
-                                    logger.warning("Module postuler_functions non disponible, utilisation de la méthode simple")
-                                    driver.save_screenshot(f"debug_screenshots/page_offre_{title.replace(' ', '_')}.png")
-                                    job_offer["postulation_status"] = "module_manquant"
-                                    
-                                    # Possibilité de prendre une pause pour inspection manuelle
-                                    if PAUSE_APRES_POSTULATION:
-                                        input("Appuyez sur Entrée pour continuer après inspection du formulaire...")
-                                    
-                                    # Fermer l'onglet et revenir à l'onglet principal
-                                    driver.close()
-                                    driver.switch_to.window(main_handle)
-                            else:
-                                logger.error("Impossible d'ouvrir un nouvel onglet pour postuler")
-                            
-                            # Revenir à l'iframe des résultats si nécessaire
                             switch_to_iframe_if_needed(driver)
                         
                         job_offers.append(job_offer)
@@ -2510,13 +2540,8 @@ def main():
         user_email = sys.argv[1]
     
     logger.info(f"Recherche de l'utilisateur : {user_email}")
-    db = UserDatabase()
-    user_data = db.get_user_data()
-    db.close()
-    
-    if not user_data:
-        logger.warning(f"Utilisateur non trouvé, utilisation d'un profil de test.")
-        user_data = {'email': 'test@example.com', 'search_query': 'Commercial', 'location': 'Lyon'}
+    # Suppression de la base de données, on utilise directement les données de test
+    user_data = {'email': user_email, 'search_query': 'Commercial', 'location': 'Lyon'}
 
     if user_data:
         run_scraper(user_data)
@@ -2576,7 +2601,7 @@ def setup_and_run():
     
     # Configurer les variables du module externe si disponible
     if POSTULER_FUNCTIONS_LOADED:
-        import postuler_functions
+        import postuler_functions_1751543385370 as postuler_functions
         postuler_functions.AUTO_REMPLIR_FORMULAIRE = args.remplir
         postuler_functions.AUTO_ENVOYER_CANDIDATURE = args.envoyer
         if args.cv:
