@@ -1,3 +1,8 @@
+
+Information plus qu'importante n'oublie pas d'integerer le cv , si tu l'oublie tout l code foire 
+ca parait fou mais c'est vrai n'oublie pas le cv 
+
+
 # Système d'Automatisation des Candidatures d'Alternance
 
 Interface web pour automatiser les candidatures sur alternance.gouv.fr avec surveillance en temps réel.
@@ -135,3 +140,7 @@ Ce workflow garantit que la candidature est envoyée de façon fiable, même si 
 ## ⚠️ Important
 
 Ce système utilise l'automatisation web pour faciliter les candidatures. Assurez-vous de respecter les conditions d'utilisation du site alternance.gouv.fr et utilisez le système de manière responsable.# tracker-
+
+
+
+Information
