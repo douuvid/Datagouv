@@ -1,14 +1,10 @@
 import logging
-import json
 import os
 import time
-import re
 import sys
-import traceback
 import datetime
-import unicodedata
-import base64
 import random
+import re
 from urllib.parse import urlparse, unquote, parse_qs
 from postuler_functions_1751543385370 import remplir_formulaire_candidature, postuler_offre, AUTO_REMPLIR_FORMULAIRE, AUTO_ENVOYER_CANDIDATURE
 from capture_functions_1751543392689 import capture_and_highlight, switch_to_iframe_if_needed
@@ -25,7 +21,6 @@ from selenium.common.exceptions import (
 from bs4 import BeautifulSoup
 from selenium.webdriver.chrome.service import Service as ChromeService
 from webdriver_manager.chrome import ChromeDriverManager
-from typing import Optional, Any, Dict
 import argparse
 import os
 
@@ -2085,6 +2080,7 @@ def run_scraper(user_data):
                 
                 # Extraire les informations de chaque carte d'offre/formation
                 for index, card in enumerate(filtered_cards):
+                    logger.info(index, card.get_attribute('outerHTML'))
                     try:
                         # Capturer le HTML complet de la carte pour le debug
                         card_html = card.get_attribute('outerHTML')
@@ -2151,7 +2147,7 @@ def run_scraper(user_data):
                             "p:contains(', ')"  # Format commun pour les adresses: "Ville, Code postal"
                         ]
                         
-                        import re
+                        
                         postal_code_pattern = re.compile(r'\b\d{5}\b')  # Regex pour les codes postaux français
                         
                         for selector in location_selectors:
@@ -2403,7 +2399,7 @@ def run_scraper(user_data):
                                     driver.find_element(By.CSS_SELECTOR, 'textarea[data-testid="message"]').clear()
                                     driver.find_element(By.CSS_SELECTOR, 'textarea[data-testid="message"]').send_keys("Je suis très motivé par cette alternance.")
                                     # 4. Upload du CV (s'assurer que le fichier n'est pas vide !)
-                                    cv_path = "/Users/davidravin/Desktop/objet.pdf"  # CV réel de l'utilisateur
+                                    cv_path = "/Users/davidravin/Desktop/floup.pdf"  # CV réel de l'utilisateur
                                     if not os.path.exists(cv_path) or os.path.getsize(cv_path) == 0:
                                         logger.error("Le fichier CV est manquant ou vide, annulation de la candidature.")
                                         driver.save_screenshot("debug_screenshots/cv_missing_or_empty.png")
@@ -2431,11 +2427,12 @@ def run_scraper(user_data):
                                     logger.info("Candidature envoyée avec succès.")
                                       # Pause pour laisser le site traiter la soumission
                                     time.sleep(15)
-                                except Exception as e:
-                                    logger.error(f"Erreur lors de la postulation automatique : {e}")
-                                finally:
                                     driver.close()
                                     driver.switch_to.window(main_handle)
+                                except Exception as e:
+                                    logger.error(f"Erreur lors de la postulation automatique : {e}")
+                                
+                                    
                             switch_to_iframe_if_needed(driver)
                         
                         job_offers.append(job_offer)
