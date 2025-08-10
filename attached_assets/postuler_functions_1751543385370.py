@@ -9,7 +9,44 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import NoSuchElementException, TimeoutException, StaleElementReferenceException
 from selenium.webdriver.common.action_chains import ActionChains
 from selenium.webdriver.common.keys import Keys # Added for robust clearing
-from selenium.webdriver.common.action_chains import ActionChains
+import json
+
+def load_frontend_config():
+    """
+    Charge la configuration utilisateur depuis frontend/user_config.json
+    Retourne un dictionnaire avec les données utilisateur formatées pour DataGouv
+    """
+    try:
+        # Chemin vers le fichier de configuration frontend (comme iQuesta)
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        project_root = os.path.join(script_dir, '..', '..', '..', '..')
+        config_path = os.path.join(project_root, 'frontend', 'user_config.json')
+        
+        if not os.path.exists(config_path):
+            print(f"⚠️ Fichier de configuration non trouvé : {config_path}")
+            return None
+            
+        with open(config_path, 'r', encoding='utf-8') as f:
+            config = json.load(f)
+            
+        # Mapper les champs du frontend vers le format DataGouv
+        user_data = {
+            'nom': config.get('last_name', 'Dupont'),
+            'prenom': config.get('first_name', 'Jean'),
+            'email': config.get('email', 'jean.dupont@example.com'),
+            'telephone': config.get('phone', '0612345678'),
+            'metier': config.get('job_title', 'développeur'),
+            'localisation': config.get('location', 'Paris'),
+            'type_contrat': config.get('contract_type', 'CDI')
+        }
+        
+        print(f"✅ Configuration chargée depuis le frontend : {user_data['prenom']} {user_data['nom']}")
+        return user_data
+        
+    except Exception as e:
+        print(f"❌ Erreur lors du chargement de la configuration frontend : {e}")
+        return None
+
 # Configuration du logging
 logger = logging.getLogger(__name__)
 if not logger.handlers:
@@ -49,6 +86,23 @@ Je serais ravi(e) de pouvoir échanger avec vous pour vous présenter ma motivat
 Cordialement,
 [Prénom Nom]
 """
+
+def detect_cv_lm_files():
+    # Chemin vers les fichiers centralisés
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    project_root = os.path.join(script_dir, '..', '..', '..', '..')
+    upload_dir = os.path.join(project_root, 'frontend', 'static', 'uploads')
+    
+    # Détecter les fichiers CV et LM
+    cv_path = None
+    lm_path = None
+    for filename in os.listdir(upload_dir):
+        if filename.lower().startswith('cv') and (filename.endswith('.pdf') or filename.endswith('.docx')):
+            cv_path = os.path.join(upload_dir, filename)
+        elif filename.lower().startswith('lm') and (filename.endswith('.pdf') or filename.endswith('.docx')):
+            lm_path = os.path.join(upload_dir, filename)
+    
+    return cv_path, lm_path
 
 def remplir_formulaire_candidature(driver, user_data, titre_offre):
     """
@@ -173,14 +227,18 @@ def remplir_formulaire_candidature(driver, user_data, titre_offre):
                 # Capture d'écran en cas d'échec
                 driver.save_screenshot(f"debug_screenshots/champ_non_trouve_{field_name}_{titre_offre.replace(' ', '_')}.png")
         
-        # Gestion des documents (CV et LM) qui sont déjà sur le profil de l'utilisateur
+        # Gestion des documents (CV et LM) depuis le dossier centralisé
         print('Recherche des champs d\'upload de documents (CV, LM) ...')
         logger.info("Recherche des champs d'upload de documents...")
+        
+        # Détecter automatiquement les fichiers CV/LM dans le dossier centralisé
+        cv_path, lm_path = detect_cv_lm_files()
         
         # Tableau des types de documents à gérer et leurs sélecteurs potentiels
         document_types = [
             {
                 "name": "CV",
+                "file_path": cv_path,
                 "selectors": [
                     "input[type='file'][accept='.docx,.pdf']", 
                     "input[type='file'][data-testid='cv-upload']",
@@ -189,6 +247,7 @@ def remplir_formulaire_candidature(driver, user_data, titre_offre):
             },
             {
                 "name": "Lettre de motivation", 
+                "file_path": lm_path,
                 "selectors": [
                     "input[type='file'][data-testid='lm-upload']",
                     "input[type='file'][accept='.docx,.pdf']:not(:first-child)",
@@ -197,8 +256,48 @@ def remplir_formulaire_candidature(driver, user_data, titre_offre):
             }
         ]
         
-        # Signaler que les documents sont déjà associés au profil utilisateur
-        logger.info("✅ Documents utilisateur (CV et LM) déjà associés au profil - ils seront utilisés automatiquement")
+        # Upload des documents depuis le dossier centralisé
+        for doc_type in document_types:
+            if doc_type["file_path"] and os.path.exists(doc_type["file_path"]):
+                logger.info(f"📁 Fichier {doc_type['name']} détecté : {doc_type['file_path']}")
+                
+                # Chercher le champ d'upload pour ce type de document
+                upload_field = None
+                for selector in doc_type["selectors"]:
+                    try:
+                        if selector.startswith("//"): # XPath
+                            upload_field = driver.find_element(By.XPATH, selector)
+                        else: # CSS
+                            upload_field = driver.find_element(By.CSS_SELECTOR, selector)
+                        
+                        if upload_field and upload_field.is_displayed():
+                            break
+                    except NoSuchElementException:
+                        continue
+                    except Exception as e:
+                        logger.debug(f"Erreur lors de la recherche du champ {doc_type['name']}: {str(e)[:100]}...")
+                        continue
+                
+                # Uploader le fichier si un champ est trouvé
+                if upload_field:
+                    try:
+                        # Rendre le champ visible si nécessaire
+                        driver.execute_script("arguments[0].style.display = 'block';", upload_field)
+                        
+                        # Uploader le fichier
+                        upload_field.send_keys(doc_type["file_path"])
+                        logger.info(f"✅ {doc_type['name']} uploadé avec succès : {os.path.basename(doc_type['file_path'])}")
+                        
+                        # Pause pour laisser le temps au site de traiter le fichier
+                        time.sleep(2)
+                        
+                    except Exception as e:
+                        logger.warning(f"⚠️ Impossible d'uploader le {doc_type['name']} : {e}")
+                        driver.save_screenshot(f"debug_screenshots/erreur_upload_{doc_type['name'].replace(' ', '_')}_{titre_offre.replace(' ', '_')}.png")
+                else:
+                    logger.info(f"ℹ️ Aucun champ d'upload trouvé pour {doc_type['name']} - le document du profil sera peut-être utilisé automatiquement")
+            else:
+                logger.warning(f"⚠️ Fichier {doc_type['name']} non trouvé dans le dossier centralisé")
         
         # Vérifier si des champs d'upload sont présents et les mettre en évidence pour débogage
         for doc_type in document_types:
@@ -291,56 +390,6 @@ def remplir_formulaire_candidature(driver, user_data, titre_offre):
             logger.info("✅ Cases à cocher activées")
         except Exception as e:
             logger.warning(f"Impossible de cocher les cases: {e}")
-        
-        # Supprimé : remplissage direct des champs obligatoires (nom, prénom, email, téléphone) après les cases à cocher
-        # Ce bloc provoquait un double remplissage et des doublons dans le formulaire
-        # try:
-        #     # Nom
-        #     nom_field = wait.until(EC.presence_of_element_located((By.ID, "lastName")))
-        #     nom_field.clear()
-        #     nom_field.send_keys(user_data.get('nom', 'Nom'))
-        #     # Prénom
-        #     prenom_field = wait.until(EC.presence_of_element_located((By.ID, "firstName")))
-        #     prenom_field.clear()
-        #     prenom_field.send_keys(user_data.get('prenom', 'Prénom'))
-        #     # Email
-        #     email_field = wait.until(EC.presence_of_element_located((By.ID, "email")))
-        #     email_field.clear()
-        #     email_field.send_keys(user_data.get('email', 'email@example.com'))
-        #     # Téléphone
-        #     phone_field = wait.until(EC.presence_of_element_located((By.ID, "phone")))
-        #     phone_field.clear()
-        #     phone_field.send_keys(user_data.get('telephone', '0612345678'))
-        #     logger.info("✅ Champs personnels remplis avec succès")
-        # except Exception as e:
-        #     logger.warning(f"Erreur lors du remplissage des champs personnels: {e}")
-        #     driver.save_screenshot(f"debug_screenshots/erreur_champs_personnels_{titre_offre.replace(' ', '_')}.png")
-        
-        # AJOUT : Upload du CV via l'input file caché
-        print('Upload du CV via le champ caché...')
-        try:
-            logger.info("Recherche du champ d'upload CV caché...")
-            # Chercher l'input file caché pour le CV
-            cv_input = driver.find_element(By.CSS_SELECTOR, "div[data-testid='fileDropzone'] input[type='file']")
-            
-            # Rendre l'input visible pour debug (optionnel)
-            driver.execute_script("arguments[0].style.display = 'block';", cv_input)
-            
-            # Chemin vers le CV (utiliser le fake_cv.pdf dans le dossier racine)
-            import os
-            cv_path = os.path.abspath('fake_cv.pdf')
-            
-            # Uploader le fichier
-            cv_input.send_keys(cv_path)
-            logger.info(f"✅ CV uploadé avec succès via le champ caché: {cv_path}")
-            print('Pause après upload du CV (4s) ...')
-            time.sleep(4)  # Pause pour laisser le temps au site de traiter le CV
-            # Prendre une capture d'écran après l'upload
-            driver.save_screenshot(f"debug_screenshots/apres_upload_cv_{titre_offre.replace(' ', '_')}.png")
-            
-        except Exception as e:
-            logger.warning(f"⚠️ Impossible d'uploader le CV : {e}")
-            driver.save_screenshot(f"debug_screenshots/erreur_upload_cv_{titre_offre.replace(' ', '_')}.png")
         
         # Option pour envoyer automatiquement la candidature
         if AUTO_ENVOYER_CANDIDATURE:
@@ -790,13 +839,16 @@ def postuler_offre(driver, url_offre, titre_offre, user_data=None):
         # Remplir automatiquement le formulaire si l'option est activée
         result = {"status": "succes"}
         if AUTO_REMPLIR_FORMULAIRE:
-            # Récupérer les données utilisateur (par exemple depuis un profil utilisateur)
-            user_data = {
-                'nom': 'Dupont',
-                'prenom': 'Jean',
-                'email': 'jean.dupont@example.com',
-                'telephone': '0612345678'
-            }
+            # Utiliser les données utilisateur passées en paramètre (depuis le frontend)
+            # Ne pas écraser user_data avec des valeurs hardcodées
+            if user_data is None:
+                # Fallback uniquement si aucune donnée n'est fournie
+                user_data = {
+                    'nom': 'Dupont',
+                    'prenom': 'Jean',
+                    'email': 'jean.dupont@example.com',
+                    'telephone': '0612345678'
+                }
             result = remplir_formulaire_candidature(driver, user_data, titre_offre)
         
         # Pause avant soumission si activé
